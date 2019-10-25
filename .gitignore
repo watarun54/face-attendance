@@ -1,3 +1,4 @@
 rootkey.json
 /.env
 .vscode/
+tmp/*
