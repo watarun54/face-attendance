@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>face-recognition</title>
+  </head>
+
+  <body>
+    <div>
+      <button id="start_btn">表示</button>
+      <button id="stop_btn" onclick="stop()">停止</button>
+      <button id="start_face_recognition" disabled>認証START</button>
+      <!-- <input type="checkbox" onclick="mute()">mute</input> -->
+    </div>
+    <div>
+      <div>
+        <video id="video_area" style="background-color:#000;width:400px;height:300px;" autoplay></video>        
+      </div>
+      <div id="results">
+        <span class='search-result' style="background-color: lightgrey;">結果</span>
+        <div id="search-result-list">カメラに向かって正面を向き、「認証START」を押してください。</div>
+      </div>
+    </div>
+    <div>
+      <canvas id="capture_image" style="width:400px;height:300px;display:none;"></canvas>
+    </div>
+  </body>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <script type="text/javascript">
+    if (typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      const err = new Error('getUserMedia()が利用できないブラウザです');
+      alert(`${err.name} ${err.message}`);
+      throw err;
+    }
+
+    const $start = document.getElementById('start_btn');
+    const $video = document.getElementById('video_area');
+
+    const disabledToggle = (ele) => {
+      $(ele).prop('disabled', !$(ele).prop('disabled'));
+    }
+
+    $start.addEventListener('click', () => {
+      disabledToggle('#start_btn');
+      setTimeout(() => {
+        disabledToggle('#start_face_recognition');
+      }, 1000);
+      navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then(stream => $video.srcObject = stream)
+      .catch(err => alert(`${err.name} ${err.message}`));
+    }, false);
+
+    // let mute = () => video_area.srcObject.getTracks().forEach(t => t.enabled = !t.enabled);
+    let stop = () => {
+      $('#start_btn').prop('disabled') ? disabledToggle('#start_btn') : null
+      $('#start_face_recognition').prop('disabled') ? null : disabledToggle('#start_face_recognition')
+      video_area.srcObject.getTracks().forEach(t => t.stop());
+    };
+
+    const showMatchedImages = (imageList) => {
+      $('#results').hide();
+      $("#search-result-list").empty();
+      console.log(imageList);
+      if ( imageList.length == 0 ) {
+        $('#search-result-list').append('<div>認証が失敗しました。</div>');
+      } else {
+        $('#search-result-list').append('<div>認証が成功しました。</div>');
+      }
+      $('#results').show();
+    }
+
+    $("#start_face_recognition").click(function() {
+      disabledToggle('#start_face_recognition');
+      $("#search-result-list").empty();
+      $('#search-result-list').append('<div>--- 認証中 ---</div>');
+
+      let canvas_capture_image = document.getElementById('capture_image');
+      var cci = canvas_capture_image.getContext('2d');
+
+      var w = $video.offsetWidth;
+      var h = $video.offsetHeight;
+
+      canvas_capture_image.setAttribute("width", w);
+      canvas_capture_image.setAttribute("height", h);
+
+      cci.drawImage($video, 0, 0, w, h);
+
+      var data = {
+        "img_src": canvas_capture_image.toDataURL('image/jpeg')
+      };
+
+      $.ajax({
+        url: 'http://localhost:3000/camera',
+        method: 'post',
+        dataType: 'json',
+        data: data,
+      }).done(function( res ) {
+        showMatchedImages(res);
+        $('#stop_btn').click();
+        $('#start_btn').click();
+        console.log( 'SUCCESS', res );
+      }).fail(function( jqXHR, textStatus, errorThrown ) {
+        $('#stop_btn').click();
+        $('#start_btn').click();
+        console.log( 'ERROR', jqXHR, textStatus, errorThrown );
+      });
+    });
+  </script>
+</html>

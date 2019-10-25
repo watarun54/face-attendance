@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>S3の画像検索</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script type="text/javascript">
+$(function() {
+  const S3Host = '';
+  $('#searchImage').on('click', function(evt) {
+    const form = $('#myForm').get()[0];
+    
+    // FormData オブジェクトを作成
+    const formData = new FormData( form );
+     
+    // Ajaxで送信
+    $.ajax({
+      url: 'http://localhost:3000',
+      method: 'post',
+      dataType: 'json',
+      // dataに FormDataを指定
+      data: formData,
+      // Ajaxがdataを整形しない指定
+      processData: false,
+      // contentTypeもfalseに指定
+      contentType: false
+    }).done(function( res ) {
+      // 照合結果取得
+      showMatchedImages(res);
+      console.log( 'SUCCESS', res );
+    }).fail(function( jqXHR, textStatus, errorThrown ) {
+      // 送信失敗
+      console.log( 'ERROR', jqXHR, textStatus, errorThrown );
+    });
+ 
+    return false;
+  });
+  // マッチした画像を表示
+  const showMatchedImages = (imageList) => {
+    // 結果をリセット
+    $('#results').hide();
+    $("#search-result-list").empty();
+    console.log(imageList);
+ 
+    // マッチした画像を結果に追加
+    for (var i = 0; i < imageList.length; i++) {
+      const imageSrc = S3Host + '/' + imageList[i].path;
+      $('#search-result-list').append('<div class="result-image"><img src="' + imageSrc + '" width="180"></div>');
+    }
+    // マッチ画像がないとき
+    if ( imageList.length == 0 ) {
+      $('#search-result-list').append('<div>マッチする画像はありませんでした。</div>');
+    }
+    $('#results').show();
+  }
+});
+</script>
+</head>
+<body>
+  <form id="myForm" class="form">
+      <input type="file" name="file" id="file-chooser" />
+      <button id="searchImage" type="button">画像を検索する</button>
+  </form>
+  <div id="results">
+    <span class='search-result'>検索結果</span>
+    <div id="search-result-list"></div>
+  </div>
+</body>
+</html>
